@@ -6,6 +6,9 @@ LiquidCrystal lcd(12, 11, 7, 6, 5, 4); // ordem da pinagem do display LCD
 const int botao = 2;
 const int larguraTela = 16;
 
+unsigned long tempoSom = 0; 
+bool tocandoSom = false;
+
 char blocoCima[larguraTela + 1];
 char blocoBaixo[larguraTela + 1];
 char nomeJogador[6];
@@ -16,6 +19,7 @@ bool jogadorEmCima = false;
 int tempoObstaculo = 0;
 int intervaloEntreObstaculos = 4;
 int quantidadeVidas = 3;
+int som = 9; //Pino do buzzer
 
 const int limiteCaracteresNomeJogador = 5;
 const int pontuacaoMaximaPermitida = 9999;
@@ -83,15 +87,28 @@ void criarCopiaRankingMemoria() {
 
 // Verifica se o jogador colidiu com um obstáculo
 void verificarColisao(){
-	if (jogadorEmCima && blocoCima[1] == '#' || 
-	    !jogadorEmCima && blocoBaixo[1] == '#') {
+	if (jogadorEmCima && blocoCima[0] == '#' || 
+	    !jogadorEmCima && blocoBaixo[0] == '#') {
 
       quantidadeVidas--;
+      Serial.println("Iiiiiiiiiih...");
+      
+      // Inicia o som
+      tone(som, 400);
+      tempoSom = millis(); // Salva o tempo em que o som começou
+      tocandoSom = true;   
       
       // O jogador perdeu
       if (quantidadeVidas == 0)
         computarFimDeJogo();
-  
+    }
+}
+
+// Verifica se já passou tempo suficiente para parar o som
+void atualizarSom() {
+    if (tocandoSom && millis() - tempoSom >= 10) { // Som toca por 10ms
+        noTone(som);
+        tocandoSom = false;
     }
 }
 
@@ -128,7 +145,8 @@ void computarFimDeJogo() {
     }
 
     // Espera o jogador pressionar o botão para recomeçar
-    while (!botaoApertado){}
+  	while (!botaoApertado)
+      	atualizarSom();
 
     quantidadeVidas = 3;
     pontuacaoJogador = 0;
@@ -162,13 +180,18 @@ void setup() {
     // Função de interrupção que verifica em tempo real se o botão foi pressionado. Evita a verificação dentro do loop, na qual causa conflito com a movimentação dos blocos
     attachInterrupt(digitalPinToInterrupt(botao), botaoPressionado, FALLING);    
     lcd.begin(16, 2);
-
-    // Inicia a tela sem blocos
-    memset(blocoCima, ' ', larguraTela);
-    memset(blocoBaixo, ' ', larguraTela);
+  	
+  	// Aviso para o jogador inserir o nome no monitor serial
+  	lcd.setCursor(0, 0);
+  	lcd.print("     ABRA O"); 
+  	lcd.setCursor(0, 1);
+  	lcd.print(" MONITOR SERIAL");
   
   	// Iniciar a comunicação com o monitor serial
   	Serial.begin(9600);
+  
+  	// Pino do som
+  	pinMode(9, OUTPUT);
   
   	// Iniciar ranking na memória EEPROM, caso não tenha já sido iniciado
   	if (EEPROM.read(memoriaInicializadaAddr) != 0xAA)
@@ -179,9 +202,9 @@ void setup() {
   	Serial.println("Bem vindo ao jogo Block-Dodge");
   	Serial.println("Vamos ver quem se esquiva melhor...");
   	Serial.println("Tu vais ter 3 vidas.");
-  	Serial.println("Digite o nome do jogador: ");
+  	Serial.println("Digite o nome do jogador (ate 5 letras): ");
 
-  	// Espero o jogador escrever o nome
+  	// Espera o jogador escrever o nome
   	while(Serial.available() == 0){}
 
   	if (Serial.available()) {
@@ -189,16 +212,29 @@ void setup() {
       nomeJogador[5] = '\0';
       Serial.println(nomeJogador);  
   	}
+  
+  	// Espera o jogador apertar o botão para começar
+  	lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("clique no botao!"); 
+  	
+  	while(!botaoApertado) {}
+  
+  	// Inicia a tela sem blocos
+    memset(blocoCima, ' ', larguraTela);
+    memset(blocoBaixo, ' ', larguraTela);
 }
 
-void loop() { 
+void loop() {
+    atualizarSom(); 
+  
     if (botaoApertado) {
         jogadorEmCima = !jogadorEmCima;
         botaoApertado = false;
     }
   
   	// Verifica se o jogador colidiu com um obstáculo
-	verificarColisao();
+	  verificarColisao();
     
     // Move os obstáculos/blocos para a esquerda
     memmove(blocoCima, blocoCima + 1, larguraTela - 1);
