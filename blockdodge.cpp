@@ -125,10 +125,10 @@ void computarFimDeJogo() {
       delay(150); 
     }
   
-  	// Limita a pontuação a 9999 devido às limitações
-    // de armazenamento na EEPROM
+  // Limita a pontuação à uma pontuação previamente especificada
+  //devido às limitações de armazenamento na EEPROM
   	if(pontuacaoJogador > pontuacaoMaximaPermitida)
-      pontuacaoJogador = 9999;
+      pontuacaoJogador = pontuacaoMaximaPermitida;
   
 	posicaoRankingJogador = atualizarRankingJogador();
   
