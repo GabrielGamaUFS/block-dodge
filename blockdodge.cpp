@@ -21,7 +21,6 @@ int intervaloEntreObstaculos = 4;
 int quantidadeVidas = 3;
 int som = 9; //Pino do buzzer
 
-const int limiteCaracteresNomeJogador = 5;
 const int pontuacaoMaximaPermitida = 9999;
 
 int pontuacaoJogador = 0;
@@ -128,7 +127,7 @@ void computarFimDeJogo() {
   
   	// Limita a pontuação a 9999 devido às limitações
     // de armazenamento na EEPROM
-  	if(pontuacaoJogador > 9999)
+  	if(pontuacaoJogador > pontuacaoMaximaPermitida)
       pontuacaoJogador = 9999;
   
 	posicaoRankingJogador = atualizarRankingJogador();
