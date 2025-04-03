@@ -141,7 +141,7 @@ void computarFimDeJogo() {
 
     if(posicaoRankingJogador != -1) {
       Serial.println("Voce entrou pro ranking!");
-      salvarPontuacaoJogador(posicaoRankingJogador);
+      salvarRankingEEPROM(posicaoRankingJogador);
     }
 
     // Espera o jogador pressionar o botão para recomeçar
@@ -151,6 +151,7 @@ void computarFimDeJogo() {
     quantidadeVidas = 3;
     pontuacaoJogador = 0;
     delayJogo = 200;
+  	intervaloEntreObstaculos = 4;
 }
 
 // Itera o array de pontuações do ranking que veio da EEPROM
@@ -159,10 +160,18 @@ void computarFimDeJogo() {
 // Retorna a posicao do array de ranking que o usuário entrou
 // ou -1
 int atualizarRankingJogador() {
+  char nomeJogadorSubstituido[6];
+  int pontuacaoJogadorSubstituido;
+  
   for(int i = 0; i < 5; i++) {
     if(pontuacaoJogador > pontuacoesRanking[i]) {
+      strcpy(nomeJogadorSubstituido, nomesRanking[i]);
+      pontuacaoJogadorSubstituido = pontuacoesRanking[i];
+      
       pontuacoesRanking[i] = pontuacaoJogador;
       strcpy(nomesRanking[i], nomeJogador);
+      
+      cascatearAtualizacaoRanking(i + 1, nomeJogadorSubstituido, pontuacaoJogadorSubstituido);
 
       return i;
   	}
@@ -170,9 +179,33 @@ int atualizarRankingJogador() {
   return -1;
 }
 
-void salvarPontuacaoJogador(int posicao) {
-  EEPROM.put(pontuacaoJogadorRankAddr[posicao], pontuacaoJogador);
-  EEPROM.put(nomeJogadorRankAddr[posicao], nomeJogador);
+void cascatearAtualizacaoRanking(int posicao, char* nome, int pontuacao) {
+  char nomeJogadorSubstituido[6];
+  int pontuacaoJogadorSubstituido;
+  
+  while(posicao < 5) {
+    // Salva dados que serão substituídos
+     pontuacaoJogadorSubstituido = pontuacoesRanking[posicao];
+     strcpy(nomeJogadorSubstituido, nomesRanking[posicao]);
+    
+    // Substitui pelo novo jogador a ocupar o ranking
+  	 pontuacoesRanking[posicao] = pontuacao;
+     strcpy(nomesRanking[posicao], nome);
+    
+    // O jogador que foi substituido ocupará a posição seguinte
+     pontuacao = pontuacaoJogadorSubstituido;
+     strcpy(nome, nomeJogadorSubstituido);
+            
+     posicao++;
+  }
+}
+
+void salvarRankingEEPROM(int posicao) {
+  while(posicao < 5) {
+    EEPROM.put(pontuacaoJogadorRankAddr[posicao], pontuacoesRanking[posicao]);
+    EEPROM.put(nomeJogadorRankAddr[posicao], nomesRanking[posicao]);
+    posicao++;
+  }
 }
 
 // Inicio do jogo
@@ -226,7 +259,7 @@ void setup() {
 }
 
 void loop() {
-    atualizarSom(); 
+  	atualizarSom(); 
   
     if (botaoApertado) {
         jogadorEmCima = !jogadorEmCima;
@@ -234,7 +267,7 @@ void loop() {
     }
   
   	// Verifica se o jogador colidiu com um obstáculo
-	  verificarColisao();
+	verificarColisao();
     
     // Move os obstáculos/blocos para a esquerda
     memmove(blocoCima, blocoCima + 1, larguraTela - 1);
